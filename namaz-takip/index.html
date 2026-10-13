@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Talebe Takip Sistemi</title>
+    <meta name="description" content="Talebe yurdu günlük talebe takip ve puanlama sistemi. Haftalık namaz performansını takip edin.">
+
+    <link rel="icon" type="image/png" href="corporate-logo-3.png">
+    <link rel="apple-touch-icon" href="corporate-logo-3.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Talebe Takip">
+    <link rel="stylesheet" href="style.css?v=3.4">
+</head>
+<body>
+    <div id="app">
+        <!-- Floating Background Shapes -->
+        <div class="bg-decoration">
+            <div class="bg-shape bg-shape-1"></div>
+            <div class="bg-shape bg-shape-2"></div>
+            <div class="bg-shape bg-shape-3"></div>
+        </div>
+
+        <!-- Header -->
+        <header id="main-header">
+            <div class="header-content">
+                <div class="logo-area">
+                    <div class="logo-icon"><img src="corporate-logo-3.png" alt="Talebe Takip Logo" style="width: 100%; height: 100%; object-fit: contain;"></div>
+                    <div class="logo-text">
+                        <h1>Talebe Takip Sistemi</h1>
+                    </div>
+                </div>
+                <nav id="main-nav">
+                    <div class="nav-indicator"></div>
+                    <div role="button" tabindex="0" class="nav-btn active" data-page="tracking" id="nav-tracking">
+                        <span class="nav-icon">📋</span>
+                        <span class="nav-label">Takip</span>
+                    </div>
+                    <div role="button" tabindex="0" class="nav-btn" data-page="analysis" id="nav-analysis">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-label">Analiz</span>
+                    </div>
+                </nav>
+                <div id="net-status-badge" class="net-status-badge online" title="Bağlantı Durumu">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Çevrimiçi</span>
+                </div>
+                <div role="button" tabindex="0" id="preview-btn" class="preview-btn" aria-label="Önizleme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    <span>Önizleme</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Week Navigator -->
+        <div id="week-navigator">
+            <div role="button" tabindex="0" id="prev-week" class="week-nav-btn" aria-label="Önceki hafta">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </div>
+            <div class="week-range-container">
+                <span id="week-range" class="week-range-text"></span>
+                <span id="week-label" class="week-label-text"></span>
+            </div>
+            <div role="button" tabindex="0" id="next-week" class="week-nav-btn" aria-label="Sonraki hafta">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+        </div>
+
+        <!-- Tracking Page -->
+        <main id="tracking-page" class="page active">
+            <!-- Day Tabs -->
+            <div id="day-tabs-wrapper">
+                <div id="day-tabs"></div>
+            </div>
+            
+            <!-- Student Cards -->
+            <div id="student-list"></div>
+            
+            <!-- Add Student -->
+            <div role="button" tabindex="0" id="add-student-btn" aria-label="Talebe ekle" class="floating-add-btn">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </div>
+        </main>
+
+        <!-- Analysis Page -->
+        <main id="analysis-page" class="page">
+            <div id="analysis-content"></div>
+        </main>
+    </div>
+
+    <!-- Add Student Modal -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div id="add-student-modal" class="modal">
+            <div class="modal-header">
+                <h2>Yeni Talebe</h2>
+                <div role="button" tabindex="0" id="modal-close" class="modal-close-btn" aria-label="Kapat">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <input type="text" id="student-name-input" placeholder="Talebe adını girin..." autocomplete="off">
+                    <label for="student-name-input">Ad Soyad</label>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <div role="button" tabindex="0" id="modal-cancel" class="btn btn-ghost">İptal</div>
+                <div role="button" tabindex="0" id="modal-add" class="btn btn-primary">Ekle</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirm Modal -->
+    <div id="delete-modal-overlay" class="modal-overlay">
+        <div id="delete-modal" class="modal modal-sm">
+            <div class="modal-header">
+                <h2>Talebeyi Sil</h2>
+            </div>
+            <div class="modal-body">
+                <p id="delete-confirm-text"></p>
+            </div>
+            <div class="modal-actions">
+                <div role="button" tabindex="0" id="delete-cancel" class="btn btn-ghost">İptal</div>
+                <div role="button" tabindex="0" id="delete-confirm" class="btn btn-danger">Sil</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="details-modal-overlay" class="modal-overlay">
+        <div class="modal detail-modal">
+            <div class="modal-header">
+                <div class="detail-header-info">
+                    <div id="detail-avatar" class="student-avatar"></div>
+                    <h2 id="detail-title">Talebe Detayı</h2>
+                </div>
+                <div role="button" tabindex="0" id="details-modal-close" class="close-btn">&times;</div>
+            </div>
+            <div class="modal-body">
+                <div class="detail-stats-grid">
+                    <div class="detail-stat-card">
+                        <div class="stat-label">Toplam Puan</div>
+                        <div id="stat-total-points" class="stat-value">0</div>
+                    </div>
+                    <div class="detail-stat-card">
+                        <div class="stat-label">Kesinti</div>
+                        <div id="stat-total-deductions" class="stat-value text-danger">0</div>
+                    </div>
+                </div>
+                
+                <div class="detail-section">
+                    <h3>🔍 Bu Haftaki Detaylar</h3>
+                    <div class="detail-list">
+                        <div class="detail-list-item">
+                            <span>Eksik Namaz Vakti</span>
+                            <span id="stat-missing-prayers" class="badge badge-danger">0 vakit</span>
+                        </div>
+                        <div class="detail-list-item">
+                            <span>Takke Eksikliği</span>
+                            <span id="stat-takke-count" class="badge badge-danger">0 kez</span>
+                        </div>
+                        <div class="detail-list-item">
+                            <span>Pantolon Eksikliği</span>
+                            <span id="stat-pantolon-count" class="badge badge-danger">0 kez</span>
+                        </div>
+                        <div class="detail-list-item">
+                            <span>İzin Dönüş</span>
+                            <span id="stat-izindonus-status" class="badge">Yapılmadı</span>
+                        </div>
+                        <div class="detail-list-item">
+                            <span>Tesbih Namazı</span>
+                            <span id="stat-tesbih-status" class="badge">Yapılmadı</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Student Modal -->
+    <div id="edit-modal-overlay" class="modal-overlay">
+        <div id="edit-modal" class="modal">
+            <div class="modal-header">
+                <h2>Talebeyi Düzenle</h2>
+                <div role="button" tabindex="0" id="edit-modal-close" class="modal-close-btn" aria-label="Kapat">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <input type="text" id="edit-student-name-input" placeholder="Talebe adını girin..." autocomplete="off">
+                    <label for="edit-student-name-input">Ad Soyad</label>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <div role="button" tabindex="0" id="edit-modal-cancel" class="btn btn-ghost">İptal</div>
+                <div role="button" tabindex="0" id="edit-modal-save" class="btn btn-primary">Kaydet</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Options Modal -->
+    <div id="options-modal-overlay" class="modal-overlay">
+        <div id="options-modal" class="modal modal-sm">
+            <div class="modal-header">
+                <h2 id="options-modal-title">Seçenekler</h2>
+                <div role="button" tabindex="0" id="options-modal-close" class="modal-close-btn" aria-label="Kapat">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="options-list">
+                    <label class="option-item">
+                        <input type="checkbox" id="option-takke">
+                        <span class="option-text">Takke Yok (-5 Puan)</span>
+                    </label>
+                    <label class="option-item">
+                        <input type="checkbox" id="option-pantolon">
+                        <span class="option-text">Pantolon Yok (-5 Puan)</span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <div role="button" tabindex="0" id="options-modal-save" class="btn btn-primary">Kaydet</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Takviye Score Modal -->
+    <div id="takviye-modal-overlay" class="modal-overlay">
+        <div id="takviye-modal" class="modal modal-sm">
+            <div class="modal-header">
+                <h2 id="takviye-modal-title">Takviye Puanı</h2>
+                <div role="button" tabindex="0" id="takviye-modal-close" class="modal-close-btn" aria-label="Kapat">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="score-grid">
+                    <div role="button" tabindex="0" class="score-btn" data-score="1">1</div>
+                    <div role="button" tabindex="0" class="score-btn" data-score="2">2</div>
+                    <div role="button" tabindex="0" class="score-btn" data-score="3">3</div>
+                    <div role="button" tabindex="0" class="score-btn" data-score="4">4</div>
+                    <div role="button" tabindex="0" class="score-btn" data-score="5">5</div>
+                    <div role="button" tabindex="0" class="score-btn" data-score="6">6</div>
+                    <div role="button" tabindex="0" class="score-btn" data-score="7">7</div>
+                    <div role="button" tabindex="0" class="score-btn" data-score="8">8</div>
+                    <div role="button" tabindex="0" class="score-btn" data-score="9">9</div>
+                    <div role="button" tabindex="0" class="score-btn" data-score="10">10</div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <div role="button" tabindex="0" id="takviye-modal-clear" class="btn btn-ghost">Sıfırla</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Fullscreen Overlay -->
+    <div id="preview-overlay" class="preview-overlay">
+        <div class="preview-header">
+            <div class="preview-title-area">
+                <img src="corporate-logo-3.png" alt="Logo" class="preview-logo">
+                <h1 class="preview-title">Talebe Takip</h1>
+            </div>
+            <div class="preview-week" id="preview-week-text"></div>
+            <div role="button" tabindex="0" id="preview-close" class="preview-close-btn" aria-label="Kapat">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </div>
+        </div>
+        <div class="preview-body" id="preview-body"></div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <script src="sortable.min.js"></script>
+    <script type="module" src="app.js?v=3.4"></script>
+</body>
+</html>
