@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Talebe Takip">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css?v=3.8">
+    <link rel="stylesheet" href="style.css?v=3.9">
 </head>
 <body>
     <div id="app">
@@ -45,6 +45,10 @@
                         <span class="nav-label">Analiz</span>
                     </div>
                 </nav>
+                <div id="sync-status" class="sync-status online" title="Bağlantı durumu">
+                    <span class="sync-dot"></span>
+                    <span class="sync-text">Çevrimiçi</span>
+                </div>
                 <div role="button" tabindex="0" id="theme-btn" class="theme-btn" aria-label="Tema Değiştir">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
                 </div>
@@ -353,6 +357,6 @@
     <div id="toast-container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <script type="module" src="app.js?v=3.8"></script>
+    <script type="module" src="app.js?v=3.9"></script>
 </body>
 </html>

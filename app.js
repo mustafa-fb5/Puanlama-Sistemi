@@ -222,52 +222,219 @@ function getStudentWeeklyPoints(weekKey, studentName) {
   return points;
 }
 
-/* ===== Persistence ===== */
-function saveState() {
-  try {
-    set(ref(db, 'puanlama_sistemi'), { students: state.students, records: state.records })
-      .catch(error => {
-        console.error('Firebase Save Error:', error);
-        showToast('Kayıt Hatası: ' + error.message);
-      });
-  } catch (e) { 
-    console.warn('Save failed:', e); 
-    showToast('Kayıt başarısız');
+/* ===== Offline & Persistence Storage ===== */
+const LOCAL_STORAGE_KEY = 'talebe_takip_data';
+const PENDING_SYNC_KEY = 'talebe_takip_pending_sync';
+
+let isOnline = navigator.onLine;
+let isSyncing = false;
+let syncTimeout = null;
+
+function updateSyncStatusUI(status, label) {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  el.className = `sync-status ${status}`;
+  const textEl = el.querySelector('.sync-text');
+  if (textEl) {
+    if (label) {
+      textEl.textContent = label;
+    } else if (status === 'online') {
+      textEl.textContent = 'Çevrimiçi';
+    } else if (status === 'offline') {
+      textEl.textContent = 'Çevrimdışı';
+    } else if (status === 'syncing') {
+      textEl.textContent = 'Aktarılıyor...';
+    }
   }
 }
 
+function saveToLocalStorage() {
+  try {
+    const payload = {
+      students: state.students,
+      records: state.records,
+      updatedAt: Date.now()
+    };
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(payload));
+  } catch (e) {
+    console.warn('LocalStorage save error:', e);
+  }
+}
+
+function loadFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (data) {
+        if (Array.isArray(data.students) && data.students.length > 0) {
+          state.students = data.students;
+        }
+        if (data.records) {
+          state.records = data.records;
+        }
+        return true;
+      }
+    }
+  } catch (e) {
+    console.warn('LocalStorage load error:', e);
+  }
+  return false;
+}
+
+function markPendingSync() {
+  try {
+    localStorage.setItem(PENDING_SYNC_KEY, 'true');
+  } catch (e) {}
+}
+
+function clearPendingSync() {
+  try {
+    localStorage.removeItem(PENDING_SYNC_KEY);
+  } catch (e) {}
+}
+
+function hasPendingSync() {
+  try {
+    return localStorage.getItem(PENDING_SYNC_KEY) === 'true';
+  } catch (e) {
+    return false;
+  }
+}
+
+async function syncPendingData() {
+  if (!navigator.onLine || isSyncing) return;
+  if (!hasPendingSync()) {
+    updateSyncStatusUI('online', 'Senkronize');
+    return;
+  }
+
+  isSyncing = true;
+  updateSyncStatusUI('syncing', 'Aktarılıyor...');
+
+  try {
+    await set(ref(db, 'puanlama_sistemi'), {
+      students: state.students,
+      records: state.records,
+      lastSync: Date.now()
+    });
+    clearPendingSync();
+    updateSyncStatusUI('online', 'Aktarıldı ✓');
+    showToast('Çevrimdışı veriler buluta aktarıldı');
+    setTimeout(() => {
+      if (navigator.onLine) updateSyncStatusUI('online', 'Çevrimiçi');
+    }, 3000);
+  } catch (error) {
+    console.error('Veri aktarma hatası:', error);
+    updateSyncStatusUI('offline', 'Aktarma Hatası');
+  } finally {
+    isSyncing = false;
+  }
+}
+
+function saveState() {
+  // Always immediately persist locally (offline-first)
+  saveToLocalStorage();
+  markPendingSync();
+
+  if (!navigator.onLine) {
+    updateSyncStatusUI('offline', 'Çevrimdışı (Kaydedildi)');
+    return;
+  }
+
+  // If online, debounce sync to Firebase to prevent flood
+  clearTimeout(syncTimeout);
+  updateSyncStatusUI('syncing', 'Kaydediliyor...');
+  syncTimeout = setTimeout(async () => {
+    try {
+      await set(ref(db, 'puanlama_sistemi'), {
+        students: state.students,
+        records: state.records,
+        lastSync: Date.now()
+      });
+      clearPendingSync();
+      updateSyncStatusUI('online', 'Kaydedildi ✓');
+      setTimeout(() => {
+        if (navigator.onLine) updateSyncStatusUI('online', 'Çevrimiçi');
+      }, 2000);
+    } catch (error) {
+      console.warn('Firebase anlık kayıt yapılamadı, beklemeye alındı:', error);
+      markPendingSync();
+      updateSyncStatusUI('offline', 'Çevrimdışı (Yerel)');
+    }
+  }, 400);
+}
+
 function loadState() {
+  // 1. Önce yerel veriyi yükle (anında görünür ve çevrimdışıyken çalışır)
+  const hadLocalData = loadFromLocalStorage();
+  if (hadLocalData) {
+    renderStudentCards();
+    if (state.currentPage === 'analysis') renderAnalysis();
+    if (isPreviewVisible()) renderPreview();
+  }
+
+  // 2. Ağ durumu dinleyicileri
+  window.addEventListener('online', () => {
+    isOnline = true;
+    showToast('İnternet bağlantısı sağlandı');
+    updateSyncStatusUI('online', 'Bağlandı');
+    syncPendingData();
+  });
+
+  window.addEventListener('offline', () => {
+    isOnline = false;
+    showToast('İnternet bağlantısı koptu. Çevrimdışı moddasınız.');
+    updateSyncStatusUI('offline', 'Çevrimdışı');
+  });
+
+  // Başlangıç durumu
+  if (!navigator.onLine) {
+    updateSyncStatusUI('offline', 'Çevrimdışı');
+  } else {
+    updateSyncStatusUI('online', 'Çevrimiçi');
+  }
+
+  // 3. Firebase'den canlı dinleme
   try {
     const dbRef = ref(db, 'puanlama_sistemi');
     onValue(dbRef, (snapshot) => {
+      // Eğer bekleyen yerel değişiklikler varsa buluttan gelen eski veriyle ezme, yerine buluta yükle
+      if (hasPendingSync()) {
+        syncPendingData();
+        return;
+      }
+
       const data = snapshot.val();
       if (data) {
         state.students = data.students || [];
         state.records = data.records || {};
-      } else {
+        saveToLocalStorage();
+      } else if (!hadLocalData) {
         state.students = ['Ahmet', 'Mehmet', 'Yusuf', 'Ali', 'Ömer'];
         state.records = {};
         saveState();
       }
-      
+
       const previewVisible = isPreviewVisible();
-      
       if (Date.now() < renderLockUntil) {
-        // Even if skipping full render, we might need to update analysis/preview if active
         if (state.currentPage === 'analysis') renderAnalysis();
         if (previewVisible) renderPreview();
         return;
       }
-      
+
       renderStudentCards();
       if (state.currentPage === 'analysis') renderAnalysis();
       if (previewVisible) renderPreview();
     }, (error) => {
-      console.error('Firebase Load Error:', error);
-      showToast('Veri Yükleme Hatası: ' + error.message);
+      console.warn('Firebase dinleme hatası (çevrimdışı olabilir):', error);
+      if (!hadLocalData && state.students.length === 0) {
+        state.students = ['Ahmet', 'Mehmet', 'Yusuf', 'Ali', 'Ömer'];
+        renderStudentCards();
+      }
     });
   } catch (e) {
-    console.warn('Load failed:', e);
+    console.warn('Firebase başlatma hatası:', e);
   }
 }
 
@@ -1081,6 +1248,17 @@ function init() {
     if (target.closest('#theme-btn') || target.closest('#theme-modal-overlay') || target.closest('.theme-option')) return;
     if (target.closest('button')) e.preventDefault();
   }, true);
+}
+
+// Service Worker Kaydı (Çevrimdışı Çalışma Desteği)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then((reg) => {
+      console.log('Service Worker kayıt başarılı:', reg.scope);
+    }).catch((err) => {
+      console.warn('Service Worker kayıt hatası:', err);
+    });
+  });
 }
 
 document.addEventListener('DOMContentLoaded', init);
